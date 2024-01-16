@@ -1,0 +1,14 @@
+[package]
+name = "scoreboard"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+egui-multiwin = "0.3.1"
+egui_extras = { version = "0.25.0", features = ["svg"] }
+fake = { version = "2.9.2", features = ["derive"] }
+rand = "0.8.5"
+serde = { version = "1.0.195", features = ["derive"] }
+toml = "0.8.8"
