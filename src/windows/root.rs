@@ -2,19 +2,24 @@ use crate::egui_multiwin_dynamic::{
     multi_window::NewWindowRequest,
     tracked_window::{RedrawResponse, TrackedWindow},
 };
-use egui_multiwin::egui::{DragValue, menu};
+use egui_multiwin::egui::{Align2, Color32, DragValue, FontFamily, FontId, menu, Rect, Rounding, Stroke, Ui};
 use egui_multiwin::egui_glow::EguiGlow;
 use egui_multiwin::winit::dpi::{PhysicalSize};
+use scoreboard_lib::{Game, get_match};
+use crate::ui::widget::{Padding, TextWidget, Widget};
 
 use crate::AppCommon;
+use crate::ui::score_grid::ScoreGrid;
 use crate::windows::HandleInput;
 
 use super::score_window::ScoreWindow;
 
 pub struct RootWindow {
     is_fullscreen: bool,
+    first_run: bool,
+    scale: f32,
+    widgets: Vec<Widget>,
     window_size: PhysicalSize<u32>,
-    show_grid_config: bool
 }
 
 impl RootWindow {
@@ -23,7 +28,7 @@ impl RootWindow {
 
         NewWindowRequest {
 
-            window_state: super::MyWindows::Root(RootWindow { is_fullscreen: false, window_size, show_grid_config: false }),
+            window_state: super::MyWindows::Root(RootWindow { is_fullscreen: false, first_run: true, scale: 2.0, widgets: vec![], window_size }),
             builder: egui_multiwin::winit::window::WindowBuilder::new()
                 .with_resizable(true)
                 .with_inner_size(window_size)
@@ -120,7 +125,145 @@ impl RootWindow {
                     });
             });
     }
+    fn on_resize(&self, c:&mut AppCommon, rect: Rect) {
+        c.first_run = false;
+        c.scoring_grid = ScoreGrid::calc(rect, &c.grid_config);
+    }
 
+    fn draw_grid(&self, c:&mut AppCommon, ui: &mut Ui) {
+        ui.painter().rect_stroke(c.scoring_grid.competitor_one.name_grid.name, Rounding::default(), Stroke::new(2.0, Color32::GREEN));
+        ui.painter().rect_stroke(c.scoring_grid.competitor_one.name_grid.flag, Rounding::default(), Stroke::new(2.0, Color32::GREEN));
+        ui.painter().rect_stroke(c.scoring_grid.competitor_one.name_grid.team, Rounding::default(), Stroke::new(2.0, Color32::GREEN));
+        ui.painter().rect_stroke(c.scoring_grid.competitor_one.name_grid.country, Rounding::default(), Stroke::new(2.0, Color32::GREEN));
+        ui.painter().rect_stroke(c.scoring_grid.competitor_one.stalling_grid.stalling, Rounding::default(), Stroke::new(2.0, Color32::GREEN));
+        ui.painter().rect_stroke(c.scoring_grid.competitor_one.points_grid.advantage, Rounding::default(), Stroke::new(2.0, Color32::GREEN));
+        ui.painter().rect_stroke(c.scoring_grid.competitor_one.points_grid.penalty, Rounding::default(), Stroke::new(2.0, Color32::GREEN));
+        ui.painter().rect_stroke(c.scoring_grid.competitor_one.points_grid.points, Rounding::default(), Stroke::new(2.0, Color32::GREEN));
+
+        ui.painter().rect_stroke(c.scoring_grid.competitor_two.name_grid.name, Rounding::default(), Stroke::new(2.0, Color32::GREEN));
+        ui.painter().rect_stroke(c.scoring_grid.competitor_two.name_grid.flag, Rounding::default(), Stroke::new(2.0, Color32::GREEN));
+        ui.painter().rect_stroke(c.scoring_grid.competitor_two.name_grid.team, Rounding::default(), Stroke::new(2.0, Color32::GREEN));
+        ui.painter().rect_stroke(c.scoring_grid.competitor_two.name_grid.country, Rounding::default(), Stroke::new(2.0, Color32::GREEN));
+        ui.painter().rect_stroke(c.scoring_grid.competitor_two.stalling_grid.stalling, Rounding::default(), Stroke::new(2.0, Color32::GREEN));
+        ui.painter().rect_stroke(c.scoring_grid.competitor_two.points_grid.advantage, Rounding::default(), Stroke::new(2.0, Color32::GREEN));
+        ui.painter().rect_stroke(c.scoring_grid.competitor_two.points_grid.penalty, Rounding::default(), Stroke::new(2.0, Color32::GREEN));
+        ui.painter().rect_stroke(c.scoring_grid.competitor_two.points_grid.points, Rounding::default(), Stroke::new(2.0, Color32::GREEN));
+
+        ui.painter().rect_stroke(c.scoring_grid.match_info.time, Rounding::default(), Stroke::new(2.0, Color32::GREEN));
+        ui.painter().rect_stroke(c.scoring_grid.match_info.match_type, Rounding::default(), Stroke::new(2.0, Color32::GREEN));
+        ui.painter().rect_stroke(c.scoring_grid.match_info.match_info, Rounding::default(), Stroke::new(2.0, Color32::GREEN));
+        ui.painter().rect_stroke(c.scoring_grid.match_info.bracket_info, Rounding::default(), Stroke::new(2.0, Color32::GREEN));
+
+    }
+
+    fn draw_menu(&self, windows_to_create: &mut Vec<NewWindowRequest>, c:&mut AppCommon, egui: &mut EguiGlow) -> bool {
+        let mut quit = false;
+
+        egui_multiwin::egui::TopBottomPanel::top("menu_bar").show(&egui.egui_ctx, |ui| {
+            menu::bar(ui, |ui| {
+                ui.menu_button("File", |ui| {
+                    if ui.button("Sample Match").clicked() {
+                        c.bjj_match = Some(get_match());
+                        println!("{:?}", c.bjj_match);
+                        ui.close_menu();
+                    }
+                    if ui.button("Exit").clicked() {
+                        quit = true;
+                    }
+                });
+                ui.menu_button("Window", |ui| {
+                    if ui.selectable_label(c.show_score_window, "Score window").clicked() {
+                        c.show_score_window = !c.show_score_window;
+
+                        if c.show_score_window {
+                            windows_to_create.push(ScoreWindow::request("Score".to_string()));
+                        }
+                        ui.close_menu();
+                    }
+
+                    if ui.selectable_label(c.show_grid_config, "Grid Config").clicked() {
+                        c.show_grid_config = !c.show_grid_config;
+                        ui.close_menu();
+                    }
+                });
+            });
+        });
+
+        quit
+    }
+
+    fn create_widgets(&mut self, c: &AppCommon, game: &Game) {
+        self.widgets.clear();
+
+        self.widgets.push(
+            Widget::Text(
+                TextWidget {
+                    text: game.competitor_one.display_name(),
+                    alignment: Align2::LEFT_CENTER,
+                    rect: c.scoring_grid.competitor_one.name_grid.name,
+                    font: FontId::new(c.font_config.competitor,FontFamily::Name("score_font".into())),
+                    padding: Padding::left(4.0),
+                    color: c.color_scheme.competitor_one_name
+                }
+            )
+        );
+
+        self.widgets.push(
+            Widget::Text(
+                TextWidget {
+                    text: game.competitor_one.team.name.to_string(),
+                    alignment: Align2::LEFT_CENTER,
+                    rect: c.scoring_grid.competitor_one.name_grid.team,
+                    font: FontId::new(c.font_config.team, FontFamily::Name("score_font".into())),
+                    padding: Padding::left(4.0),
+                    color: c.color_scheme.competitor_one_team
+                }
+            )
+        );
+
+        self.widgets.push(
+            Widget::Text(
+                TextWidget {
+                    text: game.competitor_one.country.to_string(),
+                    alignment: Align2::CENTER_CENTER,
+                    rect: c.scoring_grid.competitor_one.name_grid.country,
+                    font: FontId::new(c.font_config.country, FontFamily::Name("score_font".into())),
+                    padding: Padding::none(),
+                    color: c.color_scheme.competitor_one_country
+                }
+            )
+        );
+    }
+
+    fn draw_widgets(&mut self, ui: &mut Ui, scale: f32) {
+        for widget in &mut self.widgets {
+            widget.draw(ui, scale);
+        }
+    }
+
+    fn draw_match(&mut self, c:&mut AppCommon, window: &egui_multiwin::winit::window::Window, egui: &mut EguiGlow) {
+        egui_multiwin::egui::CentralPanel::default().show(&egui.egui_ctx, |ui| {
+            self.draw_grid(c, ui);
+
+            if self.first_run {
+                self.on_resize(c, ui.available_rect_before_wrap());
+            }
+
+            if self.window_size != window.inner_size() {
+                self.scale = window.inner_size().width as f32 / 400.0 * c.font_config.scale;
+                self.window_size = window.inner_size();
+                self.first_run = true;
+            }
+
+            if let Some(bjj_match) = &c.bjj_match {
+                self.create_widgets(c, bjj_match);
+
+                self.draw_widgets(ui, self.scale);
+            }
+
+
+        });
+    }
 }
 
 impl HandleInput for RootWindow {
@@ -155,42 +298,8 @@ impl TrackedWindow for RootWindow {
 
         self.handle_input(c, window, egui);
         self.grid_config_ui(c, egui);
-
-        egui_multiwin::egui::TopBottomPanel::top("menu_bar").show(&egui.egui_ctx, |ui| {
-            menu::bar(ui, |ui| {
-                ui.menu_button("File", |ui| {
-                    if ui.button("Exit").clicked() {
-                        quit = true;
-                    }
-                });
-                ui.menu_button("Window", |ui| {
-                    if ui.selectable_label(c.show_score_window, "Score window").clicked() {
-                        c.show_score_window = !c.show_score_window;
-
-                        if c.show_score_window {
-                            windows_to_create.push(ScoreWindow::request("Score".to_string()));
-                        }
-                    }
-
-                    if ui.selectable_label(c.show_grid_config, "Grid Config").clicked() {
-                        c.show_grid_config = !c.show_grid_config;
-                    }
-                });
-            });
-        });
-
-
-        egui_multiwin::egui::CentralPanel::default().show(&egui.egui_ctx, |ui| {
-
-        });
-
-
-        if self.window_size != window.inner_size() {
-            self.window_size = window.inner_size();
-
-            println!("Detected resize");
-        }
-
+        quit = self.draw_menu(&mut windows_to_create, c, egui);
+        self.draw_match(c, window, egui);
 
         RedrawResponse {
             quit,

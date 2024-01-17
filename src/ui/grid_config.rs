@@ -14,13 +14,13 @@ impl Default for GridConfig {
     fn default() -> Self {
         Self {
             bottom: 0.3,
-            name: 0.55,
+            name: 0.535,
             stalling: 0.47,
             adv: 0.30,
             time: 0.30,
             bracket: 0.60,
             match_type: 0.14,
-            points: 0.66,
+            points: 0.67,
             flag: 0.14
         }
     }

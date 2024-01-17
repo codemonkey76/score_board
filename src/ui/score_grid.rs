@@ -111,7 +111,6 @@ impl Default for NameGrid {
 }
 
 pub struct PointsGrid {
-    pub left: Rect,
     pub advantage: Rect,
     pub penalty: Rect,
     pub points: Rect
@@ -120,10 +119,9 @@ pub struct PointsGrid {
 impl PointsGrid {
     fn calc(rect: Rect, config: &GridConfig) -> Self {
         let (left, points) = rect.split_left_right_at_fraction(1.0 - config.points);
-        let (advantage, penalty) = rect.split_top_bottom_at_fraction(0.5);
+        let (advantage, penalty) = left.split_top_bottom_at_fraction(0.5);
 
         Self {
-            left,
             advantage,
             penalty,
             points
@@ -135,7 +133,6 @@ impl PointsGrid {
 impl Default for PointsGrid {
     fn default() -> Self {
         Self {
-            left: Rect::NOTHING,
             advantage: Rect::NOTHING,
             penalty: Rect::NOTHING,
             points: Rect::NOTHING

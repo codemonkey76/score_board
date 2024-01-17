@@ -21,14 +21,17 @@ pub trait HandleInput {
             self.toggle_fullscreen(window);
         }
     }
+
     fn toggle_fullscreen(&mut self, window: &egui_multiwin::winit::window::Window) {
-        self.set_fullscreen(!self.is_fullscreen());
         if self.is_fullscreen() {
             window.set_fullscreen(None);
         } else {
             window.set_fullscreen(Some(Fullscreen::Borderless(None)));
         }
+
+        self.set_fullscreen(!self.is_fullscreen());
     }
+
     fn set_fullscreen(&mut self, fullscreen: bool);
     fn is_fullscreen(&self) -> bool;
 }

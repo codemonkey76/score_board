@@ -16,10 +16,12 @@ pub mod egui_multiwin_dynamic {
 mod windows;
 mod ui;
 
+
 mod app_common;
 pub use app_common::AppCommon;
+use scoreboard_lib::get_match;
 
-const COMPUTER_MODERN_FONT: &[u8] = include_bytes!("./cmunbtl.ttf");
+const SCORE_FONT: &[u8] = include_bytes!("../assets/fonts/BebasNeue-Regular.ttf");
 
 use windows::{
     root::{self},
@@ -32,10 +34,10 @@ fn main() {
 
     let mut multi_window: MultiWindow = MultiWindow::new();
 
-    multi_window.add_font(
-        "computermodern".to_string(),
-        egui_multiwin::egui::FontData::from_static(COMPUTER_MODERN_FONT),
-    );
+    let mut font_data = egui_multiwin::egui::FontData::from_static(SCORE_FONT);
+    font_data.tweak.y_offset_factor = 0.08;
+
+    multi_window.add_font("score_font".to_string(), font_data);
 
     let root_window = root::RootWindow::request();
 
